@@ -242,11 +242,15 @@
 
     .side-tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       padding: 8px;
       border-bottom: 1px solid var(--line);
       background: #fbfcfd;
+    }
+
+    #lineupPanelBtn {
+      display: none;
     }
 
     .side-tab.active {
@@ -259,7 +263,7 @@
     .side-page {
       min-height: 0;
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr);
+      grid-template-rows: auto auto auto auto minmax(0, 1fr);
     }
 
     .team-toggle {
@@ -317,6 +321,76 @@
       background: #172330;
       color: #fff;
       border-color: #172330;
+    }
+
+    .player-btn.on-court {
+      border-color: #15946a;
+      box-shadow: inset 0 0 0 2px rgba(21, 148, 106, 0.22);
+      background: #edf8f3;
+    }
+
+    .player-btn.on-court.active {
+      background: #172330;
+      color: #fff;
+      border-color: #15946a;
+      box-shadow: inset 0 0 0 2px #33c493;
+    }
+
+    .player-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 18px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: rgba(21, 148, 106, 0.12);
+      color: #107452;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .player-btn.active .player-status {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    .quick-lineup {
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .lineup-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 8px;
+    }
+
+    .lineup-actions button {
+      min-height: 38px;
+      font-weight: 850;
+    }
+
+    .current-lineup {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .current-lineup strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    #quickLineupGrid {
+      display: none;
     }
 
     .lineup-panel {
@@ -868,6 +942,46 @@
       padding: 12px;
     }
 
+    .flow-grid {
+      display: grid;
+      grid-template-columns: minmax(420px, 1.2fr) minmax(320px, .8fr);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .flow-chart {
+      width: 100%;
+      min-height: 260px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .flow-list {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .flow-node {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcfd;
+      font-size: 13px;
+      line-height: 1.45;
+      cursor: pointer;
+    }
+
+    .flow-node strong {
+      color: #172330;
+    }
+
+    .flow-node.active {
+      border-color: #205b9f;
+      background: #eaf2fb;
+    }
+
     .analysis-card {
       display: grid;
       gap: 8px;
@@ -894,6 +1008,29 @@
     .analysis-detail {
       color: #425466;
       line-height: 1.5;
+    }
+
+    .analysis-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .analysis-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #eef4fa;
+      color: #193146;
+      font-weight: 850;
+      font-size: 12px;
+    }
+
+    .analysis-tag.warning {
+      background: #fff0ed;
+      color: #a83222;
     }
 
     .run-good {
@@ -1074,6 +1211,7 @@
       <button id="liveViewBtn" class="view-tab active" type="button">临场记录</button>
       <button id="summaryViewBtn" class="view-tab" type="button">球员汇总</button>
       <button id="analysisViewBtn" class="view-tab" type="button">走势分析</button>
+      <button id="gameFlowViewBtn" class="view-tab" type="button">Game Flow</button>
     </nav>
 
     <main id="livePage" class="main">
@@ -1097,6 +1235,18 @@
               <span>当前记录</span>
               <strong id="selectedInfo">主队 #1</strong>
             </button>
+          </div>
+          <div class="quick-lineup" aria-label="上场球员和替换">
+            <div class="lineup-actions">
+              <button id="quickLineupInBtn" type="button">选中上场</button>
+              <button id="quickLineupOutBtn" type="button">选中下场</button>
+              <button id="quickSaveLineupBtn" type="button">保存当前阵容</button>
+            </div>
+            <div class="current-lineup">
+              <span>当前在场</span>
+              <strong id="currentLineupText">-</strong>
+            </div>
+            <div id="quickLineupGrid" class="lineup-grid" aria-label="当前场上球员"></div>
           </div>
           <div id="rosterEditor" class="roster-editor hidden">
             <label for="rosterInput">当前球队名单，可用空格、换行或逗号分隔</label>
@@ -1282,6 +1432,14 @@
         </div>
       </div>
 
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">上场时间线</h2>
+          <span class="tag">同步比赛时间</span>
+        </div>
+        <div id="lineupTimeline" class="analysis-panel"></div>
+      </div>
+
     </section>
 
     <section id="analysisPage" class="summary-page hidden">
@@ -1291,6 +1449,35 @@
           <span class="tag">按2分钟窗口</span>
         </div>
         <div id="runAnalysis" class="analysis-panel"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">临场提醒汇总</h2>
+          <span class="tag">教练可用</span>
+        </div>
+        <div id="coachAlertAnalysis" class="analysis-panel"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">投篮热区汇报</h2>
+          <span class="tag">按球场区域</span>
+        </div>
+        <div id="heatZoneAnalysis" class="analysis-panel"></div>
+      </div>
+    </section>
+
+    <section id="gameFlowPage" class="summary-page hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Game Flow 比赛走势</h2>
+          <span class="tag">比分 · Momentum · 胜率</span>
+        </div>
+        <div class="flow-grid">
+          <div>
+            <canvas id="gameFlowCanvas" class="flow-chart" width="900" height="360" aria-label="比赛走势曲线"></canvas>
+          </div>
+          <div id="gameFlowNodes" class="flow-list"></div>
+        </div>
       </div>
     </section>
   </div>
@@ -1366,9 +1553,14 @@
       lineupPanel: document.getElementById("lineupPanel"),
       logPanel: document.getElementById("logPanel"),
       lineupGrid: document.getElementById("lineupGrid"),
+      quickLineupGrid: document.getElementById("quickLineupGrid"),
+      currentLineupText: document.getElementById("currentLineupText"),
       lineupInBtn: document.getElementById("lineupInBtn"),
       lineupOutBtn: document.getElementById("lineupOutBtn"),
       saveLineupBtn: document.getElementById("saveLineupBtn"),
+      quickLineupInBtn: document.getElementById("quickLineupInBtn"),
+      quickLineupOutBtn: document.getElementById("quickLineupOutBtn"),
+      quickSaveLineupBtn: document.getElementById("quickSaveLineupBtn"),
       players: document.getElementById("players"),
       selectedRecordBtn: document.getElementById("selectedRecordBtn"),
       selectedInfo: document.getElementById("selectedInfo"),
@@ -1385,12 +1577,19 @@
       livePage: document.getElementById("livePage"),
       finalPage: document.getElementById("finalPage"),
       analysisPage: document.getElementById("analysisPage"),
+      gameFlowPage: document.getElementById("gameFlowPage"),
       liveViewBtn: document.getElementById("liveViewBtn"),
       summaryViewBtn: document.getElementById("summaryViewBtn"),
       analysisViewBtn: document.getElementById("analysisViewBtn"),
+      gameFlowViewBtn: document.getElementById("gameFlowViewBtn"),
+      gameFlowCanvas: document.getElementById("gameFlowCanvas"),
+      gameFlowNodes: document.getElementById("gameFlowNodes"),
       finalTop: document.getElementById("finalTop"),
       finalStatsBody: document.getElementById("finalStatsBody"),
+      lineupTimeline: document.getElementById("lineupTimeline"),
       runAnalysis: document.getElementById("runAnalysis"),
+      coachAlertAnalysis: document.getElementById("coachAlertAnalysis"),
+      heatZoneAnalysis: document.getElementById("heatZoneAnalysis"),
       exportFinalBtn: document.getElementById("exportFinalBtn"),
       undoBtn: document.getElementById("undoBtn"),
       exportBtn: document.getElementById("exportBtn"),
@@ -1446,6 +1645,18 @@
       return `${minutes}:${String(rest).padStart(2, "0")}`;
     }
 
+    function gameSeconds(period, clock) {
+      const periodOffset = Math.max(0, periodIndex(period)) * 600;
+      return periodOffset + (600 - parseClock(clock));
+    }
+
+    function gameTimeLabel(totalSeconds) {
+      const period = Math.floor(totalSeconds / 600);
+      const elapsedInPeriod = totalSeconds % 600;
+      const names = ["第1节", "第2节", "第3节", "第4节", "加时"];
+      return `${names[period] || "加时"} ${formatClock(600 - elapsedInPeriod)}`;
+    }
+
     function tickClock() {
       const next = parseClock(els.clock.value) - 1;
       els.clock.value = formatClock(next);
@@ -1470,12 +1681,14 @@
 
     function buildPlayers() {
       els.players.innerHTML = "";
+      const onCourt = new Set(state.onCourt[state.activeTeam] || []);
       roster(state.activeTeam).forEach((name, index) => {
         const i = index + 1;
         const btn = document.createElement("button");
         btn.className = "player-btn";
+        if (onCourt.has(i)) btn.classList.add("on-court");
         btn.type = "button";
-        btn.innerHTML = `#${i}<span class="player-name">${name}</span>`;
+        btn.innerHTML = `#${i}<span class="player-name">${name}</span>${onCourt.has(i) ? '<span class="player-status">在场</span>' : ""}`;
         btn.dataset.player = String(i);
         btn.addEventListener("click", () => {
           state.selectedPlayer = i;
@@ -1518,6 +1731,64 @@
       state.lastDeletedEvent = null;
       state.events.push(item);
       render();
+    }
+
+    function renderLineupPanel() {
+      const current = new Set(state.onCourt[state.activeTeam] || []);
+      const lineupHtml = roster(state.activeTeam).map((name, index) => {
+        const player = index + 1;
+        const checked = current.has(player) ? " checked" : "";
+        return `<label class="lineup-check"><input type="checkbox" value="${player}"${checked}>#${player} ${name}</label>`;
+      }).join("");
+      const bindGrid = grid => {
+        if (!grid) return;
+        grid.innerHTML = lineupHtml;
+        grid.querySelectorAll("input").forEach(input => {
+          input.addEventListener("change", () => {
+            const values = [...grid.querySelectorAll("input:checked")].map(item => Number(item.value));
+            state.onCourt[state.activeTeam] = values;
+            render();
+          });
+        });
+      };
+      bindGrid(els.lineupGrid);
+      bindGrid(els.quickLineupGrid);
+      if (els.currentLineupText) {
+        const names = [...current].sort((a, b) => a - b).map(player => `#${player} ${roster(state.activeTeam)[player - 1] || ""}`);
+        els.currentLineupText.textContent = names.length ? names.join("、") : "暂未记录";
+      }
+    }
+
+    function syncLineupFromEvents() {
+      state.onCourt = { home: [], away: [] };
+      state.events.forEach(event => {
+        if (event.type === "SUB_IN" && !state.onCourt[event.team].includes(event.player)) {
+          state.onCourt[event.team].push(event.player);
+        }
+        if (event.type === "SUB_OUT") {
+          state.onCourt[event.team] = state.onCourt[event.team].filter(player => player !== event.player);
+        }
+        if (event.type === "LINEUP" && Array.isArray(event.lineup)) {
+          state.onCourt[event.team] = [...event.lineup];
+        }
+      });
+    }
+
+    function recordPlayerIn() {
+      const player = state.selectedPlayer;
+      if (!state.onCourt[state.activeTeam].includes(player)) state.onCourt[state.activeTeam].push(player);
+      addRosterEvent("SUB_IN", player);
+    }
+
+    function recordPlayerOut() {
+      const player = state.selectedPlayer;
+      state.onCourt[state.activeTeam] = state.onCourt[state.activeTeam].filter(item => item !== player);
+      addRosterEvent("SUB_OUT", player);
+    }
+
+    function recordCurrentLineup() {
+      const lineup = [...(state.onCourt[state.activeTeam] || [])].sort((a, b) => a - b);
+      addRosterEvent("LINEUP", lineup[0] || 1, lineup);
     }
 
     function makeBlankStats() {
@@ -1689,6 +1960,27 @@
       return parts.length ? parts.join("，") : "暂无明显附加事件";
     }
 
+    function teamTotalText(team) {
+      const stats = calculateStats();
+      const row = sumTeam(stats, team);
+      return `${teamName(team)}总汇：${row.pts}分，2分${shotText(row, "twoM", "twoA")}，3分${shotText(row, "threeM", "threeA")}，罚球${shotText(row, "ftM", "ftA")}，篮板${row.oreb + row.dreb}个（前${row.oreb}/后${row.dreb}），助攻${row.ast}，失误${row.to}，丢篮板${row.lostReb}，被无球${row.offBallLost}。`;
+    }
+
+    function playerEventLeaders(events, team, types = null) {
+      const rows = {};
+      events.forEach(event => {
+        if (event.team !== team) return;
+        if (types && !types.includes(event.type)) return;
+        if (!rows[event.player]) rows[event.player] = { player: event.player, count: 0, pts: 0 };
+        rows[event.player].count += 1;
+        rows[event.player].pts += scoreValue(event.type);
+      });
+      const ranked = Object.values(rows).sort((a, b) => b.count - a.count || b.pts - a.pts).slice(0, 3);
+      return ranked.length
+        ? ranked.map(row => `${playerLabel(team, row.player)} ${row.count}次${row.pts ? ` ${row.pts}分` : ""}`).join("；")
+        : "暂无明确球员";
+    }
+
     function tacticalReminderText(events) {
       const reminderTypes = ["TO_PTS_ALLOWED", "OREB_PTS_ALLOWED", "BAD_TRANSITION", "PNR_SCORE_ALLOWED", "CORNER3_ALLOWED", "DRIVE_SCORE_ALLOWED", "SIDELINE_PRESS_TO", "NO_SECOND_SIDE"];
       const counts = {};
@@ -1707,8 +1999,142 @@
       return `暂停沟通：不要只说“状态不好”，建议直接说：${reminders}。`;
     }
 
+    function shotZone(event) {
+      const x = Number(event.x);
+      const y = Number(event.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return "未标区域";
+      if (x >= 36 && x <= 64 && y <= 23) return "篮下";
+      if (x >= 22 && x <= 78 && y <= 36) return "油漆区";
+      if (x <= 13 && y <= 36) return "左底角3分";
+      if (x >= 87 && y <= 36) return "右底角3分";
+      if (x >= 34 && x <= 66 && y >= 68) return "弧顶3分";
+      if (x < 34 && y >= 34 && y <= 72) return "左侧45度";
+      if (x > 66 && y >= 34 && y <= 72) return "右侧45度";
+      if (x >= 24 && x <= 76 && y > 36 && y < 68) return "罚球线/中距离";
+      return "外线延伸区";
+    }
+
+    function shotResult(event) {
+      if (["2M", "3M", "AND1"].includes(event.type)) return "make";
+      if (["2A", "3A"].includes(event.type)) return "miss";
+      if (event.type === "DRAW_FOUL") return "foul";
+      return "";
+    }
+
+    function buildHeatZones(team) {
+      const zones = {};
+      state.events
+        .filter(event => event.team === team && ["2M", "2A", "3M", "3A", "AND1", "DRAW_FOUL"].includes(event.type) && event.x !== null && event.y !== null)
+        .forEach(event => {
+          const zone = shotZone(event);
+          if (!zones[zone]) zones[zone] = { zone, makes: 0, attempts: 0, fouls: 0, points: 0, players: {} };
+          const row = zones[zone];
+          if (!row.players[event.player]) row.players[event.player] = { player: event.player, makes: 0, attempts: 0, fouls: 0, points: 0 };
+          const player = row.players[event.player];
+          const result = shotResult(event);
+          if (result === "make") {
+            row.makes += 1;
+            player.makes += 1;
+          }
+          if (result === "make" || result === "miss") {
+            row.attempts += 1;
+            player.attempts += 1;
+          }
+          if (result === "foul") {
+            row.fouls += 1;
+            player.fouls += 1;
+          }
+          row.points += scoreValue(event.type);
+          player.points += scoreValue(event.type);
+        });
+      return Object.values(zones)
+        .map(row => ({
+          ...row,
+          pct: row.attempts ? row.makes / row.attempts : 0,
+          pressure: row.attempts + row.fouls,
+          rating: row.points + row.makes * 1.5 + row.fouls + row.attempts * 0.4
+        }))
+        .sort((a, b) => b.rating - a.rating || b.pressure - a.pressure);
+    }
+
+    function zonePlayerText(zone, team) {
+      const ranked = Object.values(zone.players || {})
+        .map(row => ({ ...row, pressure: row.attempts + row.fouls, rating: row.points + row.makes + row.fouls }))
+        .sort((a, b) => b.rating - a.rating || b.pressure - a.pressure)
+        .slice(0, 3);
+      return ranked.length
+        ? ranked.map(row => `${playerLabel(team, row.player)} ${row.makes}/${row.attempts}${row.fouls ? ` 造犯规${row.fouls}` : ""}${row.points ? ` ${row.points}分` : ""}`).join("，")
+        : "暂无主要球员";
+    }
+
+    function heatZoneText(team) {
+      const zones = buildHeatZones(team);
+      if (!zones.length) return `${teamName(team)}暂无带位置的投篮记录。`;
+      const hot = zones.filter(row => row.pressure >= 2).slice(0, 3);
+      const list = (hot.length ? hot : zones.slice(0, 2)).map(row => {
+        const pctText = row.attempts ? `${Math.round(row.pct * 100)}%` : "未出手";
+        const foulText = row.fouls ? `，造犯规${row.fouls}次` : "";
+        return `${row.zone} ${row.makes}/${row.attempts} ${pctText}${foulText}（${zonePlayerText(row, team)}）`;
+      }).join("；");
+      return `${teamName(team)}主要热区：${list}。`;
+    }
+
+    function renderCoachAlertAnalysis() {
+      if (!els.coachAlertAnalysis) return;
+      const reminderTypes = ["TO_PTS_ALLOWED", "OREB_PTS_ALLOWED", "BAD_TRANSITION", "PNR_SCORE_ALLOWED", "CORNER3_ALLOWED", "DRIVE_SCORE_ALLOWED", "SIDELINE_PRESS_TO", "NO_SECOND_SIDE"];
+      const counts = {};
+      state.events.forEach(event => {
+        if (!reminderTypes.includes(event.type)) return;
+        counts[event.type] = (counts[event.type] || 0) + 1;
+      });
+      const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (!ranked.length) {
+        els.coachAlertAnalysis.innerHTML = `<div class="analysis-card"><div class="analysis-head"><strong>暂无提醒标签</strong><span>0</span></div><div class="analysis-detail">记录“失误后失分、前板后失分、退防不足、挡拆失分”等事件后，这里会自动汇总成暂停时可说的话。</div></div>`;
+        return;
+      }
+      const tags = ranked.map(([type, count]) => `<span class="analysis-tag warning">${eventLabels[type]} ${count}</span>`).join("");
+      const focus = ranked.slice(0, 2).map(([type, count]) => `${eventLabels[type]} ${count}次`).join("，");
+      const homeLeaders = playerEventLeaders(state.events, "home", reminderTypes);
+      const awayLeaders = playerEventLeaders(state.events, "away", reminderTypes);
+      els.coachAlertAnalysis.innerHTML = `
+        <div class="analysis-card">
+          <div class="analysis-head"><strong>最需要提醒教练</strong><span>${ranked.reduce((sum, item) => sum + item[1], 0)}次</span></div>
+          <div class="analysis-tags">${tags}</div>
+          <div class="analysis-detail">本方关联球员：${homeLeaders}。对方关联球员：${awayLeaders}。</div>
+          <div class="analysis-detail">${teamTotalText("home")}</div>
+          <div class="analysis-detail">${teamTotalText("away")}</div>
+          <div class="analysis-detail">暂停沟通建议：先讲最集中的问题，当前优先说 ${focus}，再结合比分走势判断是否需要换防、保护后场篮板或调整退防。</div>
+        </div>
+      `;
+    }
+
+    function renderHeatZoneAnalysis() {
+      if (!els.heatZoneAnalysis) return;
+      const homeText = heatZoneText("home");
+      const awayText = heatZoneText("away");
+      const awayHot = buildHeatZones("away")[0];
+      const defenseText = awayHot
+        ? `防守提醒：对方当前最有威胁区域是${awayHot.zone}，优先检查这一侧的对位、协防和篮板保护。`
+        : "防守提醒：继续补充对方带位置的投篮点，才能判断重点收缩还是外扩。";
+      els.heatZoneAnalysis.innerHTML = `
+        <div class="analysis-card">
+          <div class="analysis-head"><strong>${teamName("home")}进攻热区</strong><span>本方</span></div>
+          <div class="analysis-detail">${homeText}</div>
+          <div class="analysis-detail">${teamTotalText("home")}</div>
+        </div>
+        <div class="analysis-card">
+          <div class="analysis-head"><strong>${teamName("away")}投篮热区</strong><span>对方</span></div>
+          <div class="analysis-detail">${awayText}</div>
+          <div class="analysis-detail">${teamTotalText("away")}</div>
+          <div class="analysis-detail">${defenseText}</div>
+        </div>
+      `;
+    }
+
     function renderRunAnalysis() {
       const windows = buildRunAnalysis();
+      renderCoachAlertAnalysis();
+      renderHeatZoneAnalysis();
       if (!windows.length) {
         els.runAnalysis.innerHTML = `<div class="analysis-card"><div class="analysis-head"><strong>暂无</strong><span>-</span></div><div class="analysis-detail">录入得分事件后，这里会从主队视角分析得分高潮和失分潮。</div></div>`;
         return;
@@ -1739,6 +2165,157 @@
         `);
       }
       els.runAnalysis.innerHTML = rows.length ? rows.join("") : `<div class="analysis-card"><div class="analysis-head"><strong>暂无明显波动</strong><span>0</span></div><div class="analysis-detail">目前没有主队明显得分高潮或失分潮。</div></div>`;
+    }
+
+    function renderGameFlow() {
+      const canvas = els.gameFlowCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      const left = 58;
+      const right = width - 34;
+      const top = 54;
+      const bottom = height - 48;
+      const plotWidth = right - left;
+      const plotHeight = bottom - top;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const scoringEvents = state.events
+        .filter(event => scoreValue(event.type) > 0)
+        .sort((a, b) => gameSeconds(a.period, a.clock) - gameSeconds(b.period, b.clock));
+      const maxTime = Math.max(2400, ...scoringEvents.map(event => gameSeconds(event.period, event.clock)), 1);
+      const periodCount = Math.max(4, Math.ceil(maxTime / 600));
+      const totalTime = periodCount * 600;
+      const xForTime = seconds => left + (seconds / totalTime) * plotWidth;
+      let home = 0;
+      let away = 0;
+      const points = [{ x: xForTime(0), diff: 0, home: 0, away: 0, label: "开局", event: null, time: 0 }];
+      scoringEvents.forEach(event => {
+        if (event.team === "home") home += scoreValue(event.type);
+        else away += scoreValue(event.type);
+        points.push({
+          x: xForTime(gameSeconds(event.period, event.clock)),
+          diff: home - away,
+          home,
+          away,
+          label: `${event.period} ${event.clock}`,
+          event,
+          time: gameSeconds(event.period, event.clock)
+        });
+      });
+      const maxAbs = Math.max(6, Math.ceil(Math.max(...points.map(point => Math.abs(point.diff))) / 2) * 2);
+      const midY = top + plotHeight / 2;
+      const yForDiff = diff => midY - (diff / maxAbs) * (plotHeight / 2);
+
+      ctx.strokeStyle = "#e5ebf0";
+      ctx.lineWidth = 1;
+      ctx.font = "12px Microsoft YaHei";
+      ctx.fillStyle = "#6a7888";
+      for (let i = -maxAbs; i <= maxAbs; i += Math.max(2, Math.ceil(maxAbs / 3))) {
+        const y = yForDiff(i);
+        ctx.beginPath();
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+        ctx.stroke();
+        ctx.fillText(String(i), 18, y + 4);
+      }
+
+      ctx.strokeStyle = "#9fb0c0";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(left, midY);
+      ctx.lineTo(right, midY);
+      ctx.stroke();
+      ctx.fillStyle = "#425466";
+      ctx.fillText("0", 38, midY - 6);
+      ctx.fillText("主队领先", 8, top + 12);
+      ctx.fillText("客队领先", 8, bottom);
+
+      const periodNames = ["第1节", "第2节", "第3节", "第4节", "加时"];
+      ctx.strokeStyle = "#d1dbe5";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= periodCount; i += 1) {
+        const x = xForTime(i * 600);
+        ctx.beginPath();
+        ctx.moveTo(x, top - 8);
+        ctx.lineTo(x, bottom + 6);
+        ctx.stroke();
+        if (i < periodCount) {
+          ctx.fillStyle = "#172330";
+          ctx.fillText(periodNames[i] || `加时${i - 3}`, x + 6, bottom + 26);
+        }
+      }
+
+      ctx.strokeStyle = "#205b9f";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        const y = yForDiff(point.diff);
+        if (index === 0) ctx.moveTo(point.x, y);
+        else ctx.lineTo(point.x, y);
+      });
+      ctx.stroke();
+
+      const keyPoints = [];
+      let lastKeyDiff = 0;
+      points.slice(1).forEach((point, index) => {
+        const eventPoints = scoreValue(point.event?.type);
+        const isLast = index === points.length - 2;
+        const isBigChange = Math.abs(point.diff - lastKeyDiff) >= 4;
+        const isThree = eventPoints >= 3;
+        if (isBigChange || isThree || isLast) {
+          keyPoints.push(point);
+          lastKeyDiff = point.diff;
+        }
+      });
+      keyPoints.slice(0, 10).forEach((point, index) => {
+        const y = yForDiff(point.diff);
+        ctx.fillStyle = point.diff >= 0 ? "#14845d" : "#c23b3b";
+        ctx.beginPath();
+        ctx.arc(point.x, y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        const text = `${point.label} ${point.home}:${point.away}`;
+        const textWidth = ctx.measureText(text).width + 8;
+        const labelX = Math.min(right - textWidth, Math.max(left + 2, point.x - textWidth / 2));
+        const labelY = index % 2 === 0 ? Math.max(top + 12, y - 16) : Math.min(bottom - 4, y + 22);
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.fillRect(labelX - 2, labelY - 12, textWidth, 17);
+        ctx.strokeStyle = "#d9e1e8";
+        ctx.strokeRect(labelX - 2, labelY - 12, textWidth, 17);
+        ctx.fillStyle = "#172330";
+        ctx.fillText(text, labelX + 2, labelY);
+      });
+
+      ctx.fillStyle = "#172330";
+      ctx.font = "16px Microsoft YaHei";
+      ctx.fillText("比分时间轴 / 主队净胜分 Momentum", left, 26);
+      ctx.fillText(`${home} : ${away}`, width - 110, 26);
+      ctx.font = "12px Microsoft YaHei";
+      ctx.fillStyle = "#6a7888";
+      ctx.fillText("横轴按节次和比赛时间，标记点为明显分差变化或3分球。", left, 44);
+
+      const runs = buildGameFlowRuns(scoringEvents);
+      els.gameFlowNodes.innerHTML = runs.length
+        ? runs.map(run => `<div class="flow-node"><strong>${run.teamName} ${run.points}-0</strong><br>${run.startLabel} 到 ${run.endLabel}<br>${run.note}</div>`).join("")
+        : `<div class="flow-node"><strong>暂无得分潮</strong><br>录入得分后会自动识别 6-0 / 8-0 / 10-0。</div>`;
+    }
+
+    function buildGameFlowRuns(scoringEvents) {
+      const runs = [];
+      let current = null;
+      scoringEvents.forEach(event => {
+        const points = scoreValue(event.type);
+        if (!current || current.team !== event.team) {
+          if (current && current.points >= 6) runs.push(current);
+          current = { team: event.team, teamName: teamName(event.team), points: 0, startLabel: `${event.period} ${event.clock}`, endLabel: `${event.period} ${event.clock}`, note: "连续得分阶段" };
+        }
+        current.points += points;
+        current.endLabel = `${event.period} ${event.clock}`;
+      });
+      if (current && current.points >= 6) runs.push(current);
+      return runs.filter(run => run.points >= 6);
     }
 
     function getPlayerRows(stats) {
@@ -1781,6 +2358,7 @@
       if (document.activeElement !== els.rosterInput) {
         els.rosterInput.value = currentRoster.join(" ");
       }
+      renderLineupPanel();
     }
 
     function renderCourt() {
@@ -1833,9 +2411,12 @@
       [...state.events].reverse().forEach(event => {
         const row = document.createElement("div");
         row.className = "log-item";
+        const mainText = event.type === "LINEUP"
+          ? `${teamName(event.team)} 当前阵容：${(event.lineup || []).map(player => `#${player}${playerName(event.team, player) ? ` ${playerName(event.team, player)}` : ""}`).join("、") || "空"}`
+          : `${playerLabel(event.team, event.player)} ${eventLabels[event.type]}`;
         row.innerHTML = `
           <div>
-            <div class="log-main">${playerLabel(event.team, event.player)} ${eventLabels[event.type]}</div>
+            <div class="log-main">${mainText}</div>
             <div class="log-meta"><span>${event.period}</span><span>${event.clock}</span><span>${event.at}</span></div>
           </div>
           <button class="delete-log-btn" data-delete-event="${event.id}" type="button" title="删除这条记录">×</button>
@@ -1855,6 +2436,7 @@
       if (!event) return;
       state.lastDeletedEvent = { event, index };
       state.events.splice(index, 1);
+      syncLineupFromEvents();
       render();
     }
 
@@ -1863,6 +2445,7 @@
       const { event, index } = state.lastDeletedEvent;
       state.events.splice(Math.min(index, state.events.length), 0, event);
       state.lastDeletedEvent = null;
+      syncLineupFromEvents();
       render();
     }
 
@@ -2003,7 +2586,78 @@
         });
       });
       els.finalStatsBody.innerHTML = rows.join("");
+      renderLineupTimeline();
       renderRunAnalysis();
+    }
+
+    function buildLineupTimeline() {
+      const totals = { home: {}, away: {} };
+      const active = { home: {}, away: {} };
+      ["home", "away"].forEach(team => {
+        roster(team).forEach((_, index) => {
+          totals[team][index + 1] = { seconds: 0, stints: [] };
+        });
+      });
+      const sorted = [...state.events]
+        .filter(event => ["SUB_IN", "SUB_OUT", "LINEUP"].includes(event.type))
+        .sort((a, b) => gameSeconds(a.period, a.clock) - gameSeconds(b.period, b.clock));
+      sorted.forEach(event => {
+        const t = gameSeconds(event.period, event.clock);
+        if (event.type === "LINEUP") {
+          const next = new Set(event.lineup || []);
+          Object.keys(active[event.team]).forEach(player => {
+            const num = Number(player);
+            if (!next.has(num)) {
+              const start = active[event.team][num];
+              totals[event.team][num].seconds += Math.max(0, t - start);
+              totals[event.team][num].stints.push(`${gameTimeLabel(start)} - ${gameTimeLabel(t)}`);
+              delete active[event.team][num];
+            }
+          });
+          next.forEach(player => {
+            if (active[event.team][player] === undefined) active[event.team][player] = t;
+            if (!totals[event.team][player]) totals[event.team][player] = { seconds: 0, stints: [] };
+          });
+        }
+        if (event.type === "SUB_IN") {
+          if (active[event.team][event.player] === undefined) active[event.team][event.player] = t;
+          if (!totals[event.team][event.player]) totals[event.team][event.player] = { seconds: 0, stints: [] };
+        }
+        if (event.type === "SUB_OUT" && active[event.team][event.player] !== undefined) {
+          const start = active[event.team][event.player];
+          if (!totals[event.team][event.player]) totals[event.team][event.player] = { seconds: 0, stints: [] };
+          totals[event.team][event.player].seconds += Math.max(0, t - start);
+          totals[event.team][event.player].stints.push(`${gameTimeLabel(start)} - ${gameTimeLabel(t)}`);
+          delete active[event.team][event.player];
+        }
+      });
+      const now = gameSeconds(els.period.value, els.clock.value);
+      ["home", "away"].forEach(team => {
+        Object.entries(active[team]).forEach(([player, start]) => {
+          const num = Number(player);
+          if (!totals[team][num]) totals[team][num] = { seconds: 0, stints: [] };
+          totals[team][num].seconds += Math.max(0, now - start);
+          totals[team][num].stints.push(`${gameTimeLabel(start)} - 现在`);
+        });
+      });
+      return totals;
+    }
+
+    function renderLineupTimeline() {
+      const totals = buildLineupTimeline();
+      const rows = [];
+      ["home", "away"].forEach(team => {
+        Object.entries(totals[team]).forEach(([player, data]) => {
+          if (!data.seconds && !data.stints.length) return;
+          rows.push(`
+            <div class="analysis-card">
+              <div class="analysis-head"><strong>${playerLabel(team, Number(player))}</strong><span>${formatClock(data.seconds)}</span></div>
+              <div class="analysis-detail">${data.stints.join("；")}</div>
+            </div>
+          `);
+        });
+      });
+      els.lineupTimeline.innerHTML = rows.length ? rows.join("") : `<div class="analysis-card"><div class="analysis-head"><strong>暂无上场记录</strong><span>0:00</span></div><div class="analysis-detail">在“上场阵容”页签记录当前阵容或球员上/下场后，这里会显示时间线。</div></div>`;
     }
 
     function renderShotMode() {
@@ -2015,19 +2669,24 @@
     function renderView() {
       const isSummary = state.currentView === "summary";
       const isAnalysis = state.currentView === "analysis";
-      els.livePage.classList.toggle("hidden", isSummary || isAnalysis);
+      const isGameFlow = state.currentView === "gameFlow";
+      els.livePage.classList.toggle("hidden", isSummary || isAnalysis || isGameFlow);
       els.finalPage.classList.toggle("hidden", !isSummary);
       els.analysisPage.classList.toggle("hidden", !isAnalysis);
-      els.liveViewBtn.classList.toggle("active", !isSummary && !isAnalysis);
+      els.gameFlowPage.classList.toggle("hidden", !isGameFlow);
+      els.liveViewBtn.classList.toggle("active", !isSummary && !isAnalysis && !isGameFlow);
       els.summaryViewBtn.classList.toggle("active", isSummary);
       els.analysisViewBtn.classList.toggle("active", isAnalysis);
+      els.gameFlowViewBtn.classList.toggle("active", isGameFlow);
     }
 
     function renderSidePanel() {
       const showLogs = state.sidePanel === "logs";
       els.playerPanel.classList.toggle("hidden", showLogs);
+      els.lineupPanel.classList.add("hidden");
       els.logPanel.classList.toggle("hidden", !showLogs);
       els.playerPanelBtn.classList.toggle("active", !showLogs);
+      if (els.lineupPanelBtn) els.lineupPanelBtn.classList.remove("active");
       els.logPanelBtn.classList.toggle("active", showLogs);
     }
 
@@ -2035,6 +2694,7 @@
       return {
         teams: state.teams,
         events: state.events,
+        onCourt: state.onCourt,
         period: els.period.value,
         clock: els.clock.value,
         gameName: els.gameName.value.trim() || "未命名比赛",
@@ -2086,6 +2746,7 @@
 
     function resetCurrentGame(nextName) {
       state.events = [];
+      state.onCourt = { home: [], away: [] };
       setClockRunning(false);
       state.lastDeletedEvent = null;
       state.currentView = "live";
@@ -2123,6 +2784,7 @@
       renderSummary(stats);
       renderStats(stats);
       renderFinalStats(stats);
+      renderGameFlow();
       renderView();
       renderSidePanel();
       renderClockButton();
@@ -2200,6 +2862,8 @@
       setClockRunning(false);
       state.teams = normalizeTeams(data.teams);
       state.events = Array.isArray(data.events) ? data.events : [];
+      state.onCourt = data.onCourt || { home: [], away: [] };
+      syncLineupFromEvents();
       els.teamHomeName.value = state.teams.home?.name || "主队";
       els.teamAwayName.value = state.teams.away?.name || "客队";
       els.period.value = data.period || "第1节";
@@ -2314,6 +2978,7 @@
 
     els.undoBtn.addEventListener("click", () => {
       state.events.pop();
+      syncLineupFromEvents();
       render();
     });
 
@@ -2334,6 +2999,12 @@
       state.sidePanel = "players";
       render();
     });
+    if (els.lineupPanelBtn) {
+      els.lineupPanelBtn.addEventListener("click", () => {
+        state.sidePanel = "players";
+        render();
+      });
+    }
     els.logPanelBtn.addEventListener("click", () => {
       state.sidePanel = "logs";
       render();
@@ -2356,6 +3027,12 @@
     els.saveLocalGameBtn.addEventListener("click", saveLocalGame);
     els.loadLocalGameBtn.addEventListener("click", loadLocalGame);
     els.deleteLocalGameBtn.addEventListener("click", deleteLocalGame);
+    els.lineupInBtn.addEventListener("click", recordPlayerIn);
+    els.lineupOutBtn.addEventListener("click", recordPlayerOut);
+    els.saveLineupBtn.addEventListener("click", recordCurrentLineup);
+    els.quickLineupInBtn.addEventListener("click", recordPlayerIn);
+    els.quickLineupOutBtn.addEventListener("click", recordPlayerOut);
+    els.quickSaveLineupBtn.addEventListener("click", recordCurrentLineup);
     els.clockToggleBtn.addEventListener("click", () => {
       setClockRunning(!state.clockRunning);
     });
@@ -2369,6 +3046,10 @@
     });
     els.analysisViewBtn.addEventListener("click", () => {
       state.currentView = "analysis";
+      render();
+    });
+    els.gameFlowViewBtn.addEventListener("click", () => {
+      state.currentView = "gameFlow";
       render();
     });
     els.teamHomeName.addEventListener("input", render);
