@@ -1007,6 +1007,27 @@
       padding: 12px;
     }
 
+    .overview-splits {
+      display: grid;
+      gap: 12px;
+      padding: 0 12px 12px;
+    }
+
+    .compact-header {
+      border: 1px solid var(--line);
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      min-height: 42px;
+      background: #fbfcfd;
+    }
+
+    .period-table-wrap {
+      max-height: 32vh;
+      border: 1px solid var(--line);
+      border-radius: 0 0 8px 8px;
+      background: #fff;
+    }
+
     .final-table-wrap {
       overflow: auto;
       max-height: calc(100vh - 235px);
@@ -1496,6 +1517,66 @@
           <button id="exportFinalBtn" type="button">导出汇总CSV</button>
         </div>
         <div id="finalTop" class="final-top"></div>
+        <div class="overview-splits">
+          <div>
+            <div class="panel-header compact-header">
+              <h2 class="panel-title">每节球队总汇</h2>
+              <span class="tag">主队 / 客队</span>
+            </div>
+            <div class="final-table-wrap period-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>节次</th>
+                    <th>球队</th>
+                    <th>得分</th>
+                    <th>2分</th>
+                    <th>3分</th>
+                    <th>罚球</th>
+                    <th>前板</th>
+                    <th>后板</th>
+                    <th>篮板</th>
+                    <th>助攻</th>
+                    <th>失误</th>
+                    <th>丢板</th>
+                    <th>被无球</th>
+                    <th>效率</th>
+                  </tr>
+                </thead>
+                <tbody id="periodTeamStatsBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="panel-header compact-header">
+              <h2 class="panel-title">每节球员总汇</h2>
+              <span class="tag">按球员</span>
+            </div>
+            <div class="final-table-wrap period-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>节次</th>
+                    <th>球队/球员</th>
+                    <th>得分</th>
+                    <th>2分</th>
+                    <th>3分</th>
+                    <th>罚球</th>
+                    <th>前板</th>
+                    <th>后板</th>
+                    <th>篮板</th>
+                    <th>助攻</th>
+                    <th>失误</th>
+                    <th>丢板</th>
+                    <th>被无球</th>
+                    <th>效率</th>
+                  </tr>
+                </thead>
+                <tbody id="periodPlayerStatsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="summaryPlayersPage" class="panel sub-page hidden">
@@ -1697,6 +1778,8 @@
       gameFlowNodes: document.getElementById("gameFlowNodes"),
       finalTop: document.getElementById("finalTop"),
       finalStatsBody: document.getElementById("finalStatsBody"),
+      periodTeamStatsBody: document.getElementById("periodTeamStatsBody"),
+      periodPlayerStatsBody: document.getElementById("periodPlayerStatsBody"),
       lineupTimeline: document.getElementById("lineupTimeline"),
       runAnalysis: document.getElementById("runAnalysis"),
       coachAlertAnalysis: document.getElementById("coachAlertAnalysis"),
@@ -1925,6 +2008,25 @@
       };
     }
 
+    function applyEventToStats(row, event) {
+      if (event.type === "2M") { row.twoM += 1; row.twoA += 1; row.pts += 2; }
+      if (event.type === "2A") row.twoA += 1;
+      if (event.type === "3M") { row.threeM += 1; row.threeA += 1; row.pts += 3; }
+      if (event.type === "3A") row.threeA += 1;
+      if (event.type === "AND1") { row.twoM += 1; row.twoA += 1; row.pts += 2; row.and1 += 1; }
+      if (event.type === "DRAW_FOUL") row.drawFoul += 1;
+      if (event.type === "FTM") { row.ftM += 1; row.ftA += 1; row.pts += 1; }
+      if (event.type === "FTA") row.ftA += 1;
+      if (event.type === "OREB") row.oreb += 1;
+      if (event.type === "DREB") row.dreb += 1;
+      if (event.type === "LOST_REB") row.lostReb += 1;
+      if (event.type === "OFFBALL_LOST") row.offBallLost += 1;
+      if (event.type === "AST") row.ast += 1;
+      if (event.type === "TO") row.to += 1;
+      if (event.type === "STL") row.stl += 1;
+      if (event.type === "BLK") row.blk += 1;
+    }
+
     function calculateStats() {
       const stats = { home: {}, away: {} };
       ["home", "away"].forEach(team => {
@@ -1939,22 +2041,7 @@
         if (!stats[event.team]) stats[event.team] = {};
         if (!stats[event.team][event.player]) stats[event.team][event.player] = makeBlankStats();
         const row = stats[event.team][event.player];
-        if (event.type === "2M") { row.twoM += 1; row.twoA += 1; row.pts += 2; }
-        if (event.type === "2A") row.twoA += 1;
-        if (event.type === "3M") { row.threeM += 1; row.threeA += 1; row.pts += 3; }
-        if (event.type === "3A") row.threeA += 1;
-        if (event.type === "AND1") { row.twoM += 1; row.twoA += 1; row.pts += 2; row.and1 += 1; }
-        if (event.type === "DRAW_FOUL") row.drawFoul += 1;
-        if (event.type === "FTM") { row.ftM += 1; row.ftA += 1; row.pts += 1; }
-        if (event.type === "FTA") row.ftA += 1;
-        if (event.type === "OREB") row.oreb += 1;
-        if (event.type === "DREB") row.dreb += 1;
-        if (event.type === "LOST_REB") row.lostReb += 1;
-        if (event.type === "OFFBALL_LOST") row.offBallLost += 1;
-        if (event.type === "AST") row.ast += 1;
-        if (event.type === "TO") row.to += 1;
-        if (event.type === "STL") row.stl += 1;
-        if (event.type === "BLK") row.blk += 1;
+        applyEventToStats(row, event);
       });
       return stats;
     }
@@ -2008,6 +2095,11 @@
       const order = ["第1节", "第2节", "第3节", "第4节", "加时"];
       const found = order.indexOf(period);
       return found >= 0 ? found : order.length;
+    }
+
+    function statPeriods() {
+      const base = ["第1节", "第2节", "第3节", "第4节"];
+      return state.events.some(event => event.period === "加时") ? [...base, "加时"] : base;
     }
 
     function runWindowLabel(period, startRemaining, endRemaining) {
@@ -2465,6 +2557,90 @@
       return rows;
     }
 
+    function buildPeriodStats() {
+      const periods = statPeriods();
+      const periodStats = {};
+      periods.forEach(period => {
+        periodStats[period] = {
+          home: { team: makeBlankStats(), players: {} },
+          away: { team: makeBlankStats(), players: {} }
+        };
+        ["home", "away"].forEach(team => {
+          const eventMax = state.events
+            .filter(event => event.team === team && event.period === period)
+            .reduce((max, event) => Math.max(max, Number(event.player) || 0), 0);
+          const count = Math.max(roster(team).length, eventMax, 1);
+          for (let i = 1; i <= count; i += 1) {
+            periodStats[period][team].players[i] = makeBlankStats();
+          }
+        });
+      });
+
+      state.events.forEach(event => {
+        const period = periodStats[event.period] ? event.period : "加时";
+        if (!periodStats[period]) {
+          periodStats[period] = {
+            home: { team: makeBlankStats(), players: {} },
+            away: { team: makeBlankStats(), players: {} }
+          };
+        }
+        if (!periodStats[period][event.team].players[event.player]) {
+          periodStats[period][event.team].players[event.player] = makeBlankStats();
+        }
+        applyEventToStats(periodStats[period][event.team].team, event);
+        applyEventToStats(periodStats[period][event.team].players[event.player], event);
+      });
+      return { periods: Object.keys(periodStats).sort((a, b) => periodIndex(a) - periodIndex(b)), periodStats };
+    }
+
+    function periodStatCells(row) {
+      return `
+        <td>${row.pts}</td>
+        <td>${shotText(row, "twoM", "twoA")}</td>
+        <td>${shotText(row, "threeM", "threeA")}</td>
+        <td>${shotText(row, "ftM", "ftA")}</td>
+        <td>${row.oreb}</td>
+        <td>${row.dreb}</td>
+        <td>${row.oreb + row.dreb}</td>
+        <td>${row.ast}</td>
+        <td>${row.to}</td>
+        <td>${row.lostReb}</td>
+        <td>${row.offBallLost}</td>
+        <td>${playerEfficiency(row)}</td>
+      `;
+    }
+
+    function renderPeriodSummaryTables() {
+      if (!els.periodTeamStatsBody || !els.periodPlayerStatsBody) return;
+      const { periods, periodStats } = buildPeriodStats();
+      const teamRows = [];
+      const playerRows = [];
+      periods.forEach(period => {
+        ["home", "away"].forEach(team => {
+          const teamRow = periodStats[period][team].team;
+          teamRows.push(`
+            <tr class="final-team-row">
+              <td>${period}</td>
+              <td>${teamName(team)}</td>
+              ${periodStatCells(teamRow)}
+            </tr>
+          `);
+          Object.entries(periodStats[period][team].players).forEach(([player, row]) => {
+            const hasData = Object.values(row).some(Boolean);
+            playerRows.push(`
+              <tr class="final-player-row${hasData ? " has-data" : ""}"${hasData ? "" : " style=\"color:#8a98a7\""}>
+                <td>${period}</td>
+                <td>${playerLabel(team, Number(player))}</td>
+                ${periodStatCells(row)}
+              </tr>
+            `);
+          });
+        });
+      });
+      els.periodTeamStatsBody.innerHTML = teamRows.join("");
+      els.periodPlayerStatsBody.innerHTML = playerRows.join("");
+    }
+
     function updateScores(stats) {
       els.homeScore.textContent = sumTeam(stats, "home").pts;
       els.awayScore.textContent = sumTeam(stats, "away").pts;
@@ -2741,6 +2917,7 @@
         });
       });
       els.finalStatsBody.innerHTML = rows.join("");
+      renderPeriodSummaryTables();
       renderLineupTimeline();
       renderRunAnalysis();
     }
