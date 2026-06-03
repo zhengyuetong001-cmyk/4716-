@@ -1013,6 +1013,12 @@
       padding: 0 12px 12px;
     }
 
+    .overview-split-tabs {
+      padding: 0 12px 8px;
+      border-bottom: 0;
+      background: transparent;
+    }
+
     .compact-header {
       border: 1px solid var(--line);
       border-bottom: 0;
@@ -1041,6 +1047,20 @@
 
     .final-player-row.has-data td:first-child {
       color: #172330;
+    }
+
+    .player-minutes {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      margin-left: 6px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #edf3f9;
+      color: #365064;
+      font-size: 12px;
+      font-weight: 850;
+      vertical-align: middle;
     }
 
     .analysis-panel {
@@ -1509,7 +1529,6 @@
       <div class="sub-tabs" aria-label="球员汇总子页面">
         <button id="summaryOverviewTab" class="sub-tab active" type="button">全队总览</button>
         <button id="summaryPlayersTab" class="sub-tab" type="button">球员数据</button>
-        <button id="summaryLineupTab" class="sub-tab" type="button">上场时间</button>
       </div>
       <div id="summaryOverviewPage" class="panel sub-page">
         <div class="panel-header">
@@ -1517,8 +1536,12 @@
           <button id="exportFinalBtn" type="button">导出汇总CSV</button>
         </div>
         <div id="finalTop" class="final-top"></div>
+        <div class="sub-tabs overview-split-tabs" aria-label="全队总览内部切换">
+          <button id="overviewTeamSplitTab" class="sub-tab active" type="button">每节球队总汇</button>
+          <button id="overviewPlayerSplitTab" class="sub-tab" type="button">每节球员总汇</button>
+        </div>
         <div class="overview-splits">
-          <div>
+          <div id="overviewTeamSplitPage" class="sub-page">
             <div class="panel-header compact-header">
               <h2 class="panel-title">每节球队总汇</h2>
               <span class="tag">主队 / 客队</span>
@@ -1547,7 +1570,7 @@
               </table>
             </div>
           </div>
-          <div>
+          <div id="overviewPlayerSplitPage" class="sub-page hidden">
             <div class="panel-header compact-header">
               <h2 class="panel-title">每节球员总汇</h2>
               <span class="tag">按球员</span>
@@ -1611,14 +1634,6 @@
             <tbody id="finalStatsBody"></tbody>
           </table>
         </div>
-      </div>
-
-      <div id="summaryLineupPage" class="panel sub-page hidden">
-        <div class="panel-header">
-          <h2 class="panel-title">上场时间线</h2>
-          <span class="tag">同步比赛时间</span>
-        </div>
-        <div id="lineupTimeline" class="analysis-panel"></div>
       </div>
 
     </section>
@@ -1711,6 +1726,7 @@
       sidePanel: "players",
       actionSubView: "events",
       summarySubView: "overview",
+      overviewSplitSubView: "team",
       analysisSubView: "run",
       scoreBreakdownOpen: false,
       rosterOpen: false,
@@ -1790,10 +1806,12 @@
       actionArchivePage: document.getElementById("actionArchivePage"),
       summaryOverviewTab: document.getElementById("summaryOverviewTab"),
       summaryPlayersTab: document.getElementById("summaryPlayersTab"),
-      summaryLineupTab: document.getElementById("summaryLineupTab"),
       summaryOverviewPage: document.getElementById("summaryOverviewPage"),
       summaryPlayersPage: document.getElementById("summaryPlayersPage"),
-      summaryLineupPage: document.getElementById("summaryLineupPage"),
+      overviewTeamSplitTab: document.getElementById("overviewTeamSplitTab"),
+      overviewPlayerSplitTab: document.getElementById("overviewPlayerSplitTab"),
+      overviewTeamSplitPage: document.getElementById("overviewTeamSplitPage"),
+      overviewPlayerSplitPage: document.getElementById("overviewPlayerSplitPage"),
       analysisRunTab: document.getElementById("analysisRunTab"),
       analysisCoachTab: document.getElementById("analysisCoachTab"),
       analysisHeatTab: document.getElementById("analysisHeatTab"),
@@ -2610,7 +2628,12 @@
       `;
     }
 
-    function renderPeriodSummaryTables() {
+    function playerMinuteBadge(lineupTotals, team, player) {
+      const seconds = lineupTotals?.[team]?.[player]?.seconds || 0;
+      return seconds ? `<span class="player-minutes">${formatClock(seconds)}</span>` : "";
+    }
+
+    function renderPeriodSummaryTables(lineupTotals) {
       if (!els.periodTeamStatsBody || !els.periodPlayerStatsBody) return;
       const { periods, periodStats } = buildPeriodStats();
       const teamRows = [];
@@ -2630,7 +2653,7 @@
             playerRows.push(`
               <tr class="final-player-row${hasData ? " has-data" : ""}"${hasData ? "" : " style=\"color:#8a98a7\""}>
                 <td>${period}</td>
-                <td>${playerLabel(team, Number(player))}</td>
+                <td>${playerLabel(team, Number(player))}${playerMinuteBadge(lineupTotals, team, Number(player))}</td>
                 ${periodStatCells(row)}
               </tr>
             `);
@@ -2841,6 +2864,7 @@
       const totalTo = home.to + away.to;
       const totalPts = home.pts + away.pts;
       const playerRows = getPlayerRows(stats);
+      const lineupTotals = buildLineupTimeline();
       const activePlayers = playerRows
         .filter(item => item.hasData)
         .sort((a, b) => b.efficiency - a.efficiency || b.row.pts - a.row.pts || a.player - b.player);
@@ -2894,7 +2918,7 @@
           const rankClass = rank > 0 && rank <= 3 ? "rank-badge top" : "rank-badge";
           rows.push(`
             <tr class="final-player-row${item.hasData ? " has-data" : ""}"${item.hasData ? "" : " style=\"color:#8a98a7\""}>
-              <td><span class="${rankClass}">${rankText}</span>${playerLabel(team, item.player)}</td>
+              <td><span class="${rankClass}">${rankText}</span>${playerLabel(team, item.player)}${playerMinuteBadge(lineupTotals, team, item.player)}</td>
               <td>${row.pts}</td>
               <td>${fieldGoalText(row)}</td>
               <td>${shotText(row, "twoM", "twoA")}</td>
@@ -2917,8 +2941,7 @@
         });
       });
       els.finalStatsBody.innerHTML = rows.join("");
-      renderPeriodSummaryTables();
-      renderLineupTimeline();
+      renderPeriodSummaryTables(lineupTotals);
       renderRunAnalysis();
     }
 
@@ -2976,6 +2999,7 @@
     }
 
     function renderLineupTimeline() {
+      if (!els.lineupTimeline) return;
       const totals = buildLineupTimeline();
       const rows = [];
       ["home", "away"].forEach(team => {
@@ -3032,7 +3056,8 @@
       toggleSubPage(els.actionArchiveTab, els.actionArchivePage, state.actionSubView === "archive");
       toggleSubPage(els.summaryOverviewTab, els.summaryOverviewPage, state.summarySubView === "overview");
       toggleSubPage(els.summaryPlayersTab, els.summaryPlayersPage, state.summarySubView === "players");
-      toggleSubPage(els.summaryLineupTab, els.summaryLineupPage, state.summarySubView === "lineup");
+      toggleSubPage(els.overviewTeamSplitTab, els.overviewTeamSplitPage, state.overviewSplitSubView === "team");
+      toggleSubPage(els.overviewPlayerSplitTab, els.overviewPlayerSplitPage, state.overviewSplitSubView === "player");
       toggleSubPage(els.analysisRunTab, els.analysisRunPage, state.analysisSubView === "run");
       toggleSubPage(els.analysisCoachTab, els.analysisCoachPage, state.analysisSubView === "coach");
       toggleSubPage(els.analysisHeatTab, els.analysisHeatPage, state.analysisSubView === "heat");
@@ -3364,8 +3389,12 @@
       state.summarySubView = "players";
       render();
     });
-    els.summaryLineupTab.addEventListener("click", () => {
-      state.summarySubView = "lineup";
+    els.overviewTeamSplitTab.addEventListener("click", () => {
+      state.overviewSplitSubView = "team";
+      render();
+    });
+    els.overviewPlayerSplitTab.addEventListener("click", () => {
+      state.overviewSplitSubView = "player";
       render();
     });
     els.analysisRunTab.addEventListener("click", () => {
