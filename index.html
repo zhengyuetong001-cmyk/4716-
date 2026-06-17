@@ -1553,6 +1553,7 @@
         <div class="sub-tabs overview-split-tabs" aria-label="全队总览内部切换">
           <button id="overviewTeamSplitTab" class="sub-tab active" type="button">每节球队总汇</button>
           <button id="overviewPlayerSplitTab" class="sub-tab" type="button">每节球员总汇</button>
+          <button id="overviewLineupSplitTab" class="sub-tab" type="button">阵容得失分</button>
         </div>
         <div class="overview-splits">
           <div id="overviewTeamSplitPage" class="sub-page">
@@ -1610,6 +1611,28 @@
                   </tr>
                 </thead>
                 <tbody id="periodPlayerStatsBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="overviewLineupSplitPage" class="sub-page hidden">
+            <div class="panel-header compact-header">
+              <h2 class="panel-title">阵容得失分比</h2>
+              <span class="tag">换人后重新计分</span>
+            </div>
+            <div class="final-table-wrap period-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>阶段</th>
+                    <th>时间</th>
+                    <th>主队阵容</th>
+                    <th>客队阵容</th>
+                    <th>本阶段比分</th>
+                    <th>主队净胜</th>
+                    <th>提醒</th>
+                  </tr>
+                </thead>
+                <tbody id="lineupScoreBody"></tbody>
               </table>
             </div>
           </div>
@@ -1826,6 +1849,7 @@
       finalStatsBody: document.getElementById("finalStatsBody"),
       periodTeamStatsBody: document.getElementById("periodTeamStatsBody"),
       periodPlayerStatsBody: document.getElementById("periodPlayerStatsBody"),
+      lineupScoreBody: document.getElementById("lineupScoreBody"),
       lineupTimeline: document.getElementById("lineupTimeline"),
       runAnalysis: document.getElementById("runAnalysis"),
       liveCoachAlertAnalysis: document.getElementById("liveCoachAlertAnalysis"),
@@ -1841,8 +1865,10 @@
       summaryPlayersPage: document.getElementById("summaryPlayersPage"),
       overviewTeamSplitTab: document.getElementById("overviewTeamSplitTab"),
       overviewPlayerSplitTab: document.getElementById("overviewPlayerSplitTab"),
+      overviewLineupSplitTab: document.getElementById("overviewLineupSplitTab"),
       overviewTeamSplitPage: document.getElementById("overviewTeamSplitPage"),
       overviewPlayerSplitPage: document.getElementById("overviewPlayerSplitPage"),
+      overviewLineupSplitPage: document.getElementById("overviewLineupSplitPage"),
       analysisRunTab: document.getElementById("analysisRunTab"),
       analysisCoachTab: document.getElementById("analysisCoachTab"),
       analysisHeatTab: document.getElementById("analysisHeatTab"),
@@ -2407,25 +2433,83 @@
       return (lineup || []).map(player => `#${player}${playerName(team, player) ? playerName(team, player) : ""}`).join(" / ") || "未记录阵容";
     }
 
+    function applyLineupChange(current, event) {
+      if (event.type === "LINEUP" && Array.isArray(event.lineup)) {
+        current[event.team] = [...event.lineup].sort((a, b) => a - b);
+      }
+      if (event.type === "SUB_IN" && !current[event.team].includes(event.player)) {
+        current[event.team].push(event.player);
+        current[event.team].sort((a, b) => a - b);
+      }
+      if (event.type === "SUB_OUT") {
+        current[event.team] = current[event.team].filter(player => player !== event.player);
+      }
+    }
+
+    function buildLineupScoreSegments() {
+      const changes = sortedEvents().filter(event => ["LINEUP", "SUB_IN", "SUB_OUT"].includes(event.type));
+      const current = { home: [], away: [] };
+      const segments = [];
+      let lastTime = null;
+      let lastLabel = "";
+
+      const addSegment = (endTime, endLabel) => {
+        if (lastTime === null || endTime <= lastTime) return;
+        if (!current.home.length && !current.away.length) return;
+        const home = teamPointsInWindow("home", lastTime, endTime);
+        const away = teamPointsInWindow("away", lastTime, endTime);
+        segments.push({
+          startSeconds: lastTime,
+          endSeconds: endTime,
+          startLabel: lastLabel,
+          endLabel,
+          homeLineup: [...current.home],
+          awayLineup: [...current.away],
+          home,
+          away,
+          diff: home - away,
+          warning: away - home >= 6 ? "当前阵容被打出得分潮，建议考虑换人。" : ""
+        });
+      };
+
+      changes.forEach(event => {
+        const t = gameSeconds(event.period, event.clock);
+        const label = `${event.period} ${event.clock}`;
+        addSegment(t, label);
+        applyLineupChange(current, event);
+        lastTime = t;
+        lastLabel = label;
+      });
+
+      if (lastTime !== null) {
+        addSegment(gameSeconds(els.period.value, els.clock.value), "现在");
+      }
+      return segments;
+    }
+
     function buildLineupStages() {
       const lineups = { home: [], away: [] };
-      const lineupEvents = sortedEvents().filter(event => event.type === "LINEUP");
-      lineupEvents.forEach((event, index) => {
-        const start = gameSeconds(event.period, event.clock);
-        const next = lineupEvents.slice(index + 1).find(item => item.team === event.team);
-        const end = next ? gameSeconds(next.period, next.clock) : gameSeconds(els.period.value, els.clock.value);
-        const scored = teamPointsInWindow(event.team, start, end);
-        const allowed = teamPointsInWindow(event.team === "home" ? "away" : "home", start, end);
-        const opponentRuns = buildDetailedRuns().filter(run => run.team !== event.team && run.points >= 6 && run.startSeconds >= start && run.endSeconds <= end);
-        lineups[event.team].push({
-          team: event.team,
-          label: lineupKey(event.team, event.lineup),
-          startLabel: `${event.period} ${event.clock}`,
-          endLabel: next ? `${next.period} ${next.clock}` : "现在",
-          scored,
-          allowed,
-          diff: scored - allowed,
-          dangerRun: opponentRuns[0]
+      const segments = buildLineupScoreSegments();
+      segments.forEach(segment => {
+        lineups.home.push({
+          team: "home",
+          label: lineupKey("home", segment.homeLineup),
+          startLabel: segment.startLabel,
+          endLabel: segment.endLabel,
+          scored: segment.home,
+          allowed: segment.away,
+          diff: segment.diff,
+          dangerRun: segment.warning ? { points: segment.away } : null
+        });
+        lineups.away.push({
+          team: "away",
+          label: lineupKey("away", segment.awayLineup),
+          startLabel: segment.startLabel,
+          endLabel: segment.endLabel,
+          scored: segment.away,
+          allowed: segment.home,
+          diff: segment.away - segment.home,
+          dangerRun: segment.home - segment.away >= 6 ? { points: segment.home } : null
         });
       });
       return lineups;
@@ -2938,6 +3022,30 @@
       els.periodPlayerStatsBody.innerHTML = playerRows.join("");
     }
 
+    function renderLineupScoreTable() {
+      if (!els.lineupScoreBody) return;
+      const segments = buildLineupScoreSegments();
+      if (!segments.length) {
+        els.lineupScoreBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="color:#8a98a7">暂无阵容阶段。先在“球员选择”里保存当前阵容，之后每次上场/下场会自动重新计分。</td>
+          </tr>
+        `;
+        return;
+      }
+      els.lineupScoreBody.innerHTML = segments.map((segment, index) => `
+        <tr class="${segment.warning ? "final-player-row has-data" : ""}">
+          <td>阵容${index + 1}</td>
+          <td>${segment.startLabel} - ${segment.endLabel}</td>
+          <td>${lineupKey("home", segment.homeLineup)}</td>
+          <td>${lineupKey("away", segment.awayLineup)}</td>
+          <td><strong>${segment.home}:${segment.away}</strong></td>
+          <td>${segment.diff > 0 ? "+" : ""}${segment.diff}</td>
+          <td>${segment.warning || "-"}</td>
+        </tr>
+      `).join("");
+    }
+
     function updateScores(stats) {
       els.homeScore.textContent = sumTeam(stats, "home").pts;
       els.awayScore.textContent = sumTeam(stats, "away").pts;
@@ -3216,6 +3324,7 @@
       });
       els.finalStatsBody.innerHTML = rows.join("");
       renderPeriodSummaryTables(lineupTotals);
+      renderLineupScoreTable();
       renderRunAnalysis();
     }
 
@@ -3332,6 +3441,7 @@
       toggleSubPage(els.summaryPlayersTab, els.summaryPlayersPage, state.summarySubView === "players");
       toggleSubPage(els.overviewTeamSplitTab, els.overviewTeamSplitPage, state.overviewSplitSubView === "team");
       toggleSubPage(els.overviewPlayerSplitTab, els.overviewPlayerSplitPage, state.overviewSplitSubView === "player");
+      toggleSubPage(els.overviewLineupSplitTab, els.overviewLineupSplitPage, state.overviewSplitSubView === "lineup");
       toggleSubPage(els.analysisRunTab, els.analysisRunPage, state.analysisSubView === "run");
       toggleSubPage(els.analysisCoachTab, els.analysisCoachPage, state.analysisSubView === "coach");
       toggleSubPage(els.analysisHeatTab, els.analysisHeatPage, state.analysisSubView === "heat");
@@ -3672,6 +3782,10 @@
     });
     els.overviewPlayerSplitTab.addEventListener("click", () => {
       state.overviewSplitSubView = "player";
+      render();
+    });
+    els.overviewLineupSplitTab.addEventListener("click", () => {
+      state.overviewSplitSubView = "lineup";
       render();
     });
     els.analysisRunTab.addEventListener("click", () => {
