@@ -1455,12 +1455,6 @@
             <button class="event-btn" data-event="FTM" type="button">罚球进</button>
             <button class="event-btn" data-event="FTA" type="button">罚球失</button>
             <button class="event-btn warn" data-event="TIMEOUT" type="button">暂停</button>
-            <div class="event-section-title">失误来源</div>
-            <button class="event-btn warn" data-event="TO_LONG_PASS" type="button">长传失误</button>
-            <button class="event-btn warn" data-event="TO_DRIBBLE" type="button">运球失误</button>
-            <button class="event-btn warn" data-event="TO_SIDELINE" type="button">边线球失误</button>
-            <button class="event-btn warn" data-event="TO_PNR_PASS" type="button">挡拆传球失误</button>
-            <button class="event-btn warn" data-event="TO_PRESSURE" type="button">被压迫失误</button>
             <div class="event-section-title">对方得分方式</div>
             <button class="event-btn warn" data-event="OPP_FASTBREAK" type="button">快攻</button>
             <button class="event-btn warn" data-event="OPP_SECOND_CHANCE" type="button">二次进攻</button>
@@ -1769,6 +1763,7 @@
     const archiveStorageKey = "basketball-game-archive";
     const turnoverSourceTypes = ["TO_LONG_PASS", "TO_DRIBBLE", "TO_SIDELINE", "TO_PNR_PASS", "TO_PRESSURE"];
     const opponentScoreMethodTypes = ["OPP_FASTBREAK", "OPP_SECOND_CHANCE", "OPP_PNR", "OPP_DRIVE", "OPP_CORNER3", "OPP_POST"];
+    const reminderTypes = ["TO_PTS_ALLOWED", "OREB_PTS_ALLOWED", "BAD_TRANSITION", "PNR_SCORE_ALLOWED", "CORNER3_ALLOWED", "DRIVE_SCORE_ALLOWED", "SIDELINE_PRESS_TO", "NO_SECOND_SIDE"];
     const scoreCauseTypes = ["TO_PTS_ALLOWED", "OREB_PTS_ALLOWED", "BAD_TRANSITION", "PNR_SCORE_ALLOWED", "CORNER3_ALLOWED", "DRIVE_SCORE_ALLOWED", ...opponentScoreMethodTypes];
 
     const state = {
@@ -2305,7 +2300,6 @@
     }
 
     function tacticalReminderText(events) {
-      const reminderTypes = ["TO_PTS_ALLOWED", "OREB_PTS_ALLOWED", "BAD_TRANSITION", "PNR_SCORE_ALLOWED", "CORNER3_ALLOWED", "DRIVE_SCORE_ALLOWED", "SIDELINE_PRESS_TO", "NO_SECOND_SIDE"];
       const counts = {};
       events.forEach(event => {
         if (!reminderTypes.includes(event.type)) return;
@@ -2542,7 +2536,7 @@
       const awayRuns = runs.filter(run => run.team === "away").sort((a, b) => b.points - a.points);
       const maxGood = homeRuns[0];
       const maxBad = awayRuns[0];
-      const recentTurnovers = recentEventsByType(turnoverSourceTypes, 5, "home");
+      const recentCoachReminders = recentEventsByType(reminderTypes, 5);
       const recentMethods = recentEventsByType(opponentScoreMethodTypes, 5);
       const timeoutList = timeoutEffects();
       const latestTimeout = timeoutList[timeoutList.length - 1];
@@ -2551,17 +2545,17 @@
       const lineupStageText = (lineupStages.home || []).length
         ? lineupStages.home.map((stage, index) => `阵容${String.fromCharCode(65 + index)}：${stage.diff > 0 ? "+" : ""}${stage.diff}（${stage.scored}-${stage.allowed}）`).join("；")
         : "暂无保存阵容";
-      const turnoverCounts = countByType(sortedEvents().filter(event => event.team === "home" && turnoverSourceTypes.includes(event.type)));
-      const turnoverCountText = Object.entries(turnoverCounts).length
-        ? Object.entries(turnoverCounts).sort((a, b) => b[1] - a[1]).map(([type, count]) => `${eventLabels[type]}${count}次`).join("，")
-        : "暂无失误来源记录";
+      const coachReminderCounts = countByType(sortedEvents().filter(event => reminderTypes.includes(event.type)));
+      const coachReminderText = Object.entries(coachReminderCounts).length
+        ? Object.entries(coachReminderCounts).sort((a, b) => b[1] - a[1]).map(([type, count]) => `${eventLabels[type]}${count}次`).join("，")
+        : "暂无教练提醒记录";
       const advice = liveCoachAdviceText();
       const lineupWarning = currentLineup?.dangerRun ? "当前阵容被打出得分潮，建议考虑换人。" : "";
       const detailRows = [
         `当前最大得分潮：${maxGood ? `${maxGood.teamName} ${maxGood.points}-0，${maxGood.startLabel}到${maxGood.endLabel}，原因：${maxGood.causeText}` : "暂无6-0以上得分潮"}`,
         `当前最大失分潮：${maxBad ? `${maxBad.teamName} ${maxBad.points}-0，${maxBad.startLabel}到${maxBad.endLabel}，原因：${maxBad.causeText}` : "暂无6-0以上失分潮"}`,
-        `失误来源统计：${turnoverCountText}`,
-        `最近5次失误来源：${recentTurnovers.length ? recentTurnovers.map(event => `${event.period} ${event.clock} ${eventLabels[event.type]}`).join("；") : "暂无记录"}`,
+        `教练提醒统计：${coachReminderText}`,
+        `最近5次教练提醒：${recentCoachReminders.length ? recentCoachReminders.map(event => `${event.period} ${event.clock} ${eventLabels[event.type]}`).join("；") : "暂无记录"}`,
         `对方最近5次得分方式：${recentMethods.length ? recentMethods.map(event => `${event.period} ${event.clock} ${eventLabels[event.type]}`).join("；") : "暂无记录"}`,
         `暂停效果：${latestTimeout ? latestTimeout.text : "暂无暂停记录"}`,
         `阵容阶段净胜分：${lineupStageText}`,
